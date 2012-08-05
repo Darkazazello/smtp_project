@@ -1,0 +1,100 @@
+%%%-------------------------------------------------------------------
+%%% @author aza <>
+%%% @copyright (C) 2012, aza
+%%% @doc
+%%%
+%%% @end
+%%% Created :  2 Aug 2012 by aza <>
+%%%-------------------------------------------------------------------
+-module(gen_smtp_server_fsm).
+
+-behaviour(gen_fsm).
+
+%% API
+-export([start_link/0, say_hello/1]).
+
+%% gen_fsm callbacks
+-export([init/1, state_name/2, state_name/3, handle_event/3,
+	 handle_sync_event/4, handle_info/3, terminate/3, code_change/4, hello_state/1, m_state/2]).
+
+-define(SERVER, ?MODULE).
+
+-record(state, {}).
+
+start_link() ->
+    gen_fsm:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+say_hello(Address, Host) ->
+    gen_fsm:sync_send_event(?SERVER, {hello, Address, Host}).
+
+say_from(From) ->
+    gen_fsm:sync_send_event(?SERVER, {from, From}).
+
+say_rcpt(Recipient) ->
+    gen_fsm:sync_send_event(?SERVER, {rcpt, Recipient}).
+say_data() ->
+    gen_fsm:sync_send_event(?SERVER, {}).
+
+init([]) ->
+    dict:new();
+    {ok, say_hello, infinity}.
+
+state_name(_Event, State) ->
+    {next_state, state_name, State}.
+state_name(_Event, _From, State) ->
+    Reply = ok,
+    {reply, Reply, state_name, State}.
+handle_event(_Event, StateName, State) ->
+    {next_state, StateName, State}.
+handle_sync_event(_Event, _From, StateName, State) ->
+    Reply = ok,
+    {reply, Reply, StateName, State}.
+handle_info(_Info, StateName, State) ->
+    {next_state, StateName, State}.
+terminate(_Reason, _StateName, _State) ->
+    ok.
+code_change(_OldVsn, StateName, State, _Extra) ->
+    {ok, StateName, State}.
+
+hello_state({hello, Client, Host}, _From, State) ->
+    dict:store("Client", Client),
+    case send(Client, "250 Hello relay.example.org, I am glad to meet you") of
+	ok ->
+	    dict:store("Host", Host),
+	    {next_state, from_state, Host};
+	_ ->
+	    {next_state, error_state, {Client}}
+    end;
+hello_state(_Event, _From, State) ->
+    {next_state, error_state, {Client}}.
+
+from_state({from, From}, _From, State) ->
+    dict:store("From", From),
+    case send(Client, "250 OK") of
+	ok ->
+	    {next_state, rcpt_state, {}};
+	_ ->
+	    {next_state, from_state, {}}
+    end.
+
+rcpt_state ({rcpt, Recipient}, _From, State) ->
+   case dict:find("Recipient") of
+       {ok, Value} ->
+	   dict:store("Recipient", lists:append (Value, Recipient));
+       {error} ->
+	   dict:store("Recipient", Recipient)
+   end,
+    case send(Client, "250 OK") of
+	ok ->
+	    {next_state, data_state, {}};
+	_ ->
+	    {next_state, from_state, {}}
+    end
+end.
+
+data_state ({}, _From, State) ->
+    {}.
+	    
+
+
+	

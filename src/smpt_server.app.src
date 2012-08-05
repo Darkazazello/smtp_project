@@ -1,0 +1,10 @@
+{application, smtp_server,
+    [{description, "Simple smtp server"},
+     {vsn, "0.0.1"},
+     {modules, [ smtp_fsm,
+		 smtp_sv,
+		 smtp_util
+               ]},
+     {mod, {smtp_server, []}},
+     {registered, []},
+     {}.

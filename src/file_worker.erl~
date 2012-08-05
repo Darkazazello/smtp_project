@@ -1,0 +1,24 @@
+-module(file_worker).
+
+-export([write_files/2]).
+
+-compile(export_all).
+
+write_files(Table) ->
+    List = etc:table2list(Table),
+    Pid = spawn(fun -> write_file(List)).
+
+view_list(List) ->
+    {ok, S} = file:open(File, write),
+    lists:foreach(fun(X) -> io:format(S, "~p.~n" ,[X]) end, List),
+    file:close(S).
+
+
+write_file({File, Data}) ->
+    case file:open(File, write),
+	{ok,S} ->
+	    io:format(S, Data),
+	    file:close(S);
+	_Any ->
+	    {error, _Any}
+    end.

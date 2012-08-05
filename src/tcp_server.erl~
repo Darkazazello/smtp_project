@@ -1,0 +1,18 @@
+-module(tcp_server).
+
+-export([tcp_server/0]).
+
+tcp_server() ->
+    {ok, Listen} = gen_tcp:listen(2345, [binary, {active, true}]),
+    {ok, Socket} = gen_tcp:accept(Listen),
+    loop(Socket).
+
+loop(Socket) ->
+    receive
+	{tcp, Socket, Bin} ->
+	    io:format("Server received binary = ~p~n" ,[Bin]),
+	    gen_tcp:send(Socket, term_to_binary("hello")),
+	    loop(Socket);
+	{tcp_closed, Socket} ->
+	    io:format("Server socket closed~n" )
+    end.
