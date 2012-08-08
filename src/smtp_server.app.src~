@@ -1,0 +1,20 @@
+{application, smtp_project,
+ [
+  {description, "Simple smtp server"},
+  {vsn, "0.0.3"},
+  {modules, [
+	     file_worker,
+	     smtps_fsm,
+	     smtps_store,
+	     smtp_sv,
+	     tcp_server,
+	     smtp_server
+	    ]},
+  {registered, []},
+  {applications, [
+		  kernel,
+		  stdlib
+		 ]},
+  {mod, {smtp_server, []}},
+  {env, []}
+ ]}.

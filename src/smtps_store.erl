@@ -26,16 +26,15 @@ start_link() ->
 add_handler() ->
     gen_event:add_handler(?SERVER, ?MODULE, []).
 init([]) ->
-    etc:new(data, [set,duplicate_bag]),
     {ok, 1}.
 
 handle_event({new_mail, Mail}, State) ->
     etc:insert(Mail#smtp_state.user, Mail),
     NewState = State + 1,
     case NewState of
-	NewState >= ?MAX_RECORDS ->
+	?MAX_RECORDS ->
 	    %notify file worker to write record
-	    case write_to_files() of
+	    case file_writer:write_to_files([],[]) of
 		ok ->
 		    NewState = 0,
 		    etc:delete_all_objects(data);

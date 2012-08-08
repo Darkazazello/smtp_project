@@ -157,6 +157,7 @@ write_file({File, Data}) ->
 	    io:format(S,"~n~s", [Data]),
 	    file:close(S);
 	_Any ->
-	    %%create new etc table with failed list of files data.
+	    %etc:insert(backup, )
+%%create new etc table with failed list of files data.
 	    {error, _Any}
     end.

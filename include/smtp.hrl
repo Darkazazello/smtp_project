@@ -1,4 +1,4 @@
--define(MAX_RECORDS 10000).
+-define(MAX_RECORDS, 10000).
 -record(smtp_state,{
      user  = undefined,
      email = undefined,

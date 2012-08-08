@@ -1,26 +1,42 @@
--module(tcp_server).
+-module (tcp_server).
+-export([start/1]).
 
--export([tcp_server/0,start_parallel_server/0]).
+-define(PORT, 2345).
 
-tcp_server() ->
-    {ok, Listen} = gen_tcp:listen(2345, [binary, {active, once}]),
-    {ok, Socket} = gen_tcp:accept(Listen),
-    loop(Socket).
-
-loop(Socket) ->
-    receive
-	{tcp, Socket, Bin} ->
-	    io:format("Server received binary = ~p~n" ,[Bin]),
-	    %gen_tcp:send(Socket, term_to_binary("hello")),
-	    inet:setopts(Socket, [{active, once}]),
-	    loop(Socket);
-	{tcp_closed, Socket} ->
-	    io:format("Server socket closed~n" )
-    end.
-start_parallel_server() ->
-    {ok, Listen} = gen_tcp:listen(2345, [binary, {active, true}]),
+start(Port) ->
+    {ok, Listen} = gen_tcp:listen(Port, [binary, {packet, 4}, {reuseaddr, true}, 
+        {active, once}]),
     spawn(fun() -> par_connect(Listen) end).
+    
+
 par_connect(Listen) ->
     {ok, Socket} = gen_tcp:accept(Listen),
     spawn(fun() -> par_connect(Listen) end),
-    loop(Socket).
+    {ok, {Ip, Port}} = inet:peername(Socket),
+    
+    case etc:lookup(fsm, Ip) of
+        [] -> 
+            {ok,Pid} = smtp_fsm:start_link(Socket),
+            etc:insert(fsm, {{client,Ip}, {fsm, Pid}}),
+            loop(Socket, Pid);
+        {{client,Ip},{fsm, Pid}} ->
+            loop(Socket, Pid)
+    end,
+    loop(Socket, Pid).
+    
+loop(Socket, Pid) ->
+    receive
+        {tcp, Socket, Bin} ->
+                gen_fsm:sync_send_event(Pid, Bin),            
+            loop(Socket, Pid);
+        {tcp_close} ->
+            gen_tcp:close(Socket),  
+            io:format("Server closed socket")
+        after 1200 ->
+            gen_tcp:close(Socket)   
+    end.
+
+
+send_responce(Socket, Data) ->
+    gen_tcp:send(Data),
+    inet:setopts(Socket, [{active, once}]).
