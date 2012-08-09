@@ -1,0 +1,17 @@
+{application, smtpc,
+ [
+  {description, "SMTP client"},
+  {vsn, "0.0.3"},
+  {modules, [
+	     	smtpc_tcp,
+		smtpc_fsm,
+		smtpc_sup
+	
+	    ]},
+  {registered, [signals]},
+  {applications, [
+                   sasl
+                 ]},
+  {mod, { smtpc_app, []}},
+  {env, [{host, "localhost"}, {port, "25"}]}
+ ]}.

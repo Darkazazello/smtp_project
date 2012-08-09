@@ -1,0 +1,22 @@
+{application, smtp_server,
+ [
+  {description, "Simple smtp server"},
+  {vsn, "0.0.3"},
+  {modules, [
+	     file_worker,
+	     smtps_fsm,
+	     smtps_store,
+	     tcp_sup,
+	     tcp_server,
+	     smtp_server,
+	     store_sup
+	    ]},
+  {registered, []},
+  {applications, [
+		  kernel,
+		  stdlib,
+		  sasl
+		 ]},
+  {mod, {smtp_server, []}},
+  {env, [{root,"/home/mail"}, {port, "25"}, {buffer_size, 50000}]}
+ ]}.
