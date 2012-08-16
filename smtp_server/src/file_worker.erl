@@ -36,13 +36,13 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 write_files(Table) ->
-    List = etc:table2list(Table),
-    etc:delete_all_objects(data),
+    List = ets:table2list(Table),
+    ets:delete_all_objects(data),
     view_list(List).
 
 generate_name(User, Folder) ->
-    Count = etc:lookup(users, User) + 1,
-    etc:insert(users, {User, Count}),
+    Count = ets:lookup(users, User) + 1,
+    ets:insert(users, {User, Count}),
     get(root)++"/" ++ Folder ++ "/" ++ Count ++ ".mail".
 
 view_list(List) ->
@@ -54,6 +54,6 @@ write_file({File, Data}) ->
 	    io:format(S,"~n~s", [Data]),
 	    file:close(S);
 	_Any ->
-	    etc:insert(backup, {File, Data}),
+	    ets:insert(backup, {File, Data}),
         error_logger:error_message("Can't save mail, ~p", [File])
     end.

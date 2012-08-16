@@ -16,9 +16,10 @@
 %%----------------------------------------------------------------------
 start(_Type, _Args) ->
     %{ok,ListenPort} = application:get_env(,server_smtp_port),
-    etc:new(users, {set}),
-    etc:new(backup, {set}),
-    etc:new(data, [set,duplicate_bag]),
+    ets:new(users, {set, named_table, public}),
+    ets:new(backup, {set, named_table, public}),
+    ets:new(data, [duplicate_bag, named_table, public]),
+    ets:new(fsm, [duplicate_bag, named_table, public]),
     {ok,Root} = application:get_env(smtp_server, root),
     {ok, Port} = application:get_env(smtp_server, port),
     {ok, BufferSize} = application:get_env(smtp_server, buffer_size),

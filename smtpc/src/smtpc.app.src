@@ -13,5 +13,5 @@
                    sasl
                  ]},
   {mod, { smtpc_app, []}},
-  {env, [{host, "localhost"}, {port, "25"}]}
+  {env, [{host, "localhost"}, {port, 12345}]}
  ]}.

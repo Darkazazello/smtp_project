@@ -22,6 +22,7 @@ init({Host, Port, Fsm_Pid}) ->
     
 
 handle_event({send, Data}, {Socket, Fsm_Pid}) ->
+    error_logger:info_report("Received event"),
     case send(Data, Socket) of
         {error} ->
             terminate("Connection refused/n", []);
@@ -30,17 +31,16 @@ handle_event({send, Data}, {Socket, Fsm_Pid}) ->
     end;
 
 handle_event(_Event, State) ->
-    {ok,State}.
+    error.
 
 handle_call(_Request, State) ->
-    Reply = ok,
-    {ok, Reply, State}.
+    error.
 
 handle_info(_Info, State) ->
-    {ok, State}.
+    error.
 
 terminate(_Reason, _State) ->
-    ok.
+    {error, terminate}.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
@@ -49,7 +49,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 init_connection(Host, Port) ->
     case gen_tcp:connect(Host, Port, [binary, {packet, 4}]) of 
-        {ok, Socket} -> Socket;
+        {ok, Socket} -> {ok, Socket};
         _Any ->
             reconnect(Host, Port)
     end.

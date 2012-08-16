@@ -18,5 +18,5 @@
 		  sasl
 		 ]},
   {mod, {smtp_server, []}},
-  {env, [{root,"/home/mail"}, {port, "25"}, {buffer_size, 50000}]}
+  {env, [{root,"/home/mail"}, {port, 12345}, {buffer_size, 50000}]}
  ]}.

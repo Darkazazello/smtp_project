@@ -16,8 +16,8 @@ init(BufferSize) ->
     {ok, BufferSize}.
 
 handle_event({new_mail, Mail}, State) ->
-    etc:insert(mail, {Mail#smtp_state.user, Mail}),
-    Count = etc:info(mail,size),
+    ets:insert(mail, {Mail#smtp_state.user, Mail}),
+    Count = ets:info(mail,size),
     if 
         Count >= State ->
             gen_event:notify(file_writer);
