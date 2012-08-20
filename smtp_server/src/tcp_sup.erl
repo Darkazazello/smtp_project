@@ -29,7 +29,7 @@ init(Port) ->
     Restart = permanent,
     Shutdown = 2000,
     Type = worker,
-    AChild = {tcp_server, {tcp_server, start_link, Port},
+    AChild = {tcp_server, {tcp_server, start, Port},
 	      Restart, Shutdown, Type, [tcp_server]},
     {ok, {SupFlags, [AChild]}}.
 
