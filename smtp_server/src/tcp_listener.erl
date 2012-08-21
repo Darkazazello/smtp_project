@@ -26,8 +26,7 @@ connect(Listen) ->
 	    error_logger:info_msg("Received another connection~n"),
             loop(Socket, Pid);
 	_Any ->
-	    error_logger:error("Something wrong with ets~p~n", [_Any])
-       
+	    error_logger:error("Something wrong with ets~p~n", [_Any])       
     end.
     
 loop(Socket, Pid) ->
