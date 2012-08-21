@@ -18,7 +18,7 @@ connect(Listen) ->
     error_logger:info_msg("Server received connection from~p~n", [Ip]),
     case ets:lookup(fsm, {client, Ip}) of
         [] -> 
-            {ok,Pid} = smtp_fsm:start(self()),
+            {ok,Pid} = supervisor:start_child(fsm_sup, [self()]),
             ets:insert(fsm, {{client,Ip}, {fsm, Pid}}),
 	    error_logger:info_msg("Save client's socket~n"),
             loop(Socket, Pid);

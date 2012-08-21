@@ -12,71 +12,73 @@
 -import(re, [match/2]).
 -define(SERVER, ?MODULE).
 
-start(Socket) ->
-    gen_fsm:start(?MODULE, Socket, []).
+start(Pid) ->
+    gen_fsm:start(?MODULE, Pid, []).
 
-init(Socket) ->
-    put(socket, Socket),
-    {ok, smtp_responce, {helo, #smtp_state{}},infinity}.
+start_link(Pid) ->
+    start(Pid).
 
-smtp_responce(Data, {helo, State}) ->
+init(Pid) ->
+    {ok, smtp_responce, {helo, #smtp_state{}, Pid},infinity}.
+
+smtp_responce(Data, {helo, State, Pid}) ->
     case re:run(Data, "^HELO\\s.*", []) of
 	{match, _} ->
 	    Client = string:sub_string(Data, 5),
 	    NextState = State#smtp_state{user=Client},
-	    send(get(socket), "250 HELO " ++ Client ++ ", I am glad to meet you"),
+	    send(Pid, "250 HELO " ++ Client ++ ", I am glad to meet you"),
 	    {next_state, smtp_responce, {from, NextState}};
 	_Any ->
-	    send(get(socket), "500 Syntax error, command unrecognised"),
+	    send(Pid, "500 Syntax error, command unrecognised"),
 	    {next_state, smtp_responce, State}
     end;
 
-smtp_responce(Data, {from, State}) ->
+smtp_responce(Data, {from, State, Pid}) ->
     case re:run(Data, "^MAIL\\sFROM:<*>$", []) of
   	  {match, _} ->
   	    Email = string:sub_string(Data,11,string:len(Data)-1),
   	    NextState=State#smtp_state{email=Email},
-  	    send(get(socket), "250 Ok"),
+  	    send(Pid, "250 Ok"),
   	    {next_state, smtp_responce, {rcpt, NextState}};
   	  _Any ->
-  	    send(get(socket), "500 Syntax error, command unrecognised"),
+  	    send(Pid, "500 Syntax error, command unrecognised"),
   	    {next_state, smtp_responce, State}
     end;
 
 
-smtp_responce("DATA", {State}) ->
-    send(get(socket), "354 End data with <CR><LF>.<CR><LF>"),
+smtp_responce("DATA", {State, Pid}) ->
+    send(get(Pid, "354 End data with <CR><LF>.<CR><LF>"),
     {next_state, smtp_responce, {mail, State}};
 
-smtp_responce(Data, {rcpt, State}) ->
+smtp_responce(Data, {rcpt, State, Pid}) ->
     case re:run(Data, "^RCPT\\sTO:<.*>$", []) of  
        {match, _} ->
          Rcpt=string:sub_string(Data,10,string:len(Data)-1), 
          Recipients=State#smtp_state.rcpt ++ [Rcpt],
          NextState=State#smtp_state{rcpt=Recipients},
-         send(get(socket), "250 Ok"),
+         send(Pid, "250 Ok"),
          {next_state, smtp_responce, {rcpt, NextState}};
       _Any ->
-         send(get(socket), "500 Syntax error, command unrecognised"),
-	       {next_state, smtp_responce, State}
+         send(get(Pid, "500 Syntax error, command unrecognised"),
+	 {next_state, smtp_responce, State}
      end;
 
 
-smtp_responce(Data, {mail, State})->   
+smtp_responce(Data, {mail, State, Pid})->   
     Mail=State#smtp_state.mail  ++ Data,  
     NextState=State#smtp_state{mail=Mail}, 
     case erlang:list_to_binary(Data) of
   <<13,10,46,10,13>> ->
       gen_event:notify(writer, {new_mail, State}), 
-      send(get(socket), "250 Ok: queued as 12345"),
+      send(Pid, "250 Ok: queued as 12345"),
       {next_state,smtp_responce, {quite, NextState}};
   _Any ->
       {next_state,get_data,{mail,NextState}}
     end;
 
-smtp_responce(_, {quite, _}) ->
-    send(get(socket), "221 Bye"),
-    close_socket(get(socket)).
+smtp_responce(_, {quite, _, Pid}) ->
+    send(Pid, "221 Bye"),
+    close_socket(Pid).
 
 error_state(_Event, State) ->
     error_logger:error_message("Terminate FSM. State:~p/n", [State]).
@@ -93,8 +95,8 @@ terminate(_Reason, _StateName, _State) ->
 code_change(_OldVsn, StateName, State, _Extra) ->
     {ok, StateName, State}.
 
-send(Socket, Message) ->
-    io:format("Send test message~p~n", [Message]).
-close_socket(Socket) ->
-    io:format("Closing socket").
+send(Pid, Message) ->
+    Pid ! {send, Message}.
+close_socket(Pid) ->
+    Pid ! {close}.
     
