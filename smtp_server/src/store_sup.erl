@@ -19,7 +19,7 @@ init(BufferSize) ->
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
 
     Restart = permanent,
-    Shutdown = 2000,
+    Shutdown = brutal_kill,
     Type = worker,
 
     AChild = {smtps_store, {smtps_store, start_link, BufferSize},

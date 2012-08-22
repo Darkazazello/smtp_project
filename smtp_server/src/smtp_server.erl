@@ -31,5 +31,13 @@ start(_Type, _Args) ->
     smpts_store:add_handler(BufferSize).
     %supervisor:start_link({local, smtpd_sup}, smtpd_sup, [25, smtpd_fsm]).
 
+get_port() ->
+    {ok, Port}=application:get_env(smtp_server, port),
+    Port.
+
+get_buffer() ->
+   {ok, BufferSize} = application:get_env(smtp_server, buffer_size),
+   BufferSize.
+
 stop(_S) ->
     ok.

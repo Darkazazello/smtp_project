@@ -10,10 +10,11 @@
 
 -define(SERVER, ?MODULE).
 
-start_link(Listen) ->
-    supervisor:start_link({local, tcp_listener_sup}, ?MODULE, [Listen]).
+start_link(Port) ->
+    supervisor:start_link({local, tcp_listener_sup}, ?MODULE, [Port]).
 
-init([Listen]) ->
+init([Port]) ->
+    {ok, Listen} = listen_socket(Port),
     RestartStrategy = simple_for_one,
     MaxRestarts = 1000,
     MaxSecondsBetweenRestarts = 3600,
@@ -31,3 +32,6 @@ init([Listen]) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+listen_socket(Port) ->
+    gen_tcp:listen(?PORT, [binary, {packet, 4}, {reuseaddr, true}, 
+        {active, once}]).
