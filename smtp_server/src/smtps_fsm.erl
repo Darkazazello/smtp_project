@@ -27,7 +27,7 @@ smtp_responce(Data, {helo, State, Pid}) ->
 	    Client = string:sub_string(Data, 5),
 	    NextState = State#smtp_state{user=Client},
 	    send(Pid, "250 HELO " ++ Client ++ ", I am glad to meet you"),
-	    {next_state, smtp_responce, {from, NextState}};
+	    {next_state, smtp_responce, {from, NextState, Pid}};
 	_Any ->
 	    send(Pid, "500 Syntax error, command unrecognised"),
 	    {next_state, smtp_responce, State}
@@ -39,16 +39,16 @@ smtp_responce(Data, {from, State, Pid}) ->
   	    Email = string:sub_string(Data,11,string:len(Data)-1),
   	    NextState=State#smtp_state{email=Email},
   	    send(Pid, "250 Ok"),
-  	    {next_state, smtp_responce, {rcpt, NextState}};
+  	    {next_state, smtp_responce, {rcpt, NextState, Pid}};
   	  _Any ->
   	    send(Pid, "500 Syntax error, command unrecognised"),
   	    {next_state, smtp_responce, State}
     end;
 
 
-smtp_responce("DATA", {State, Pid}) ->
-    send(get(Pid, "354 End data with <CR><LF>.<CR><LF>"),
-    {next_state, smtp_responce, {mail, State}};
+smtp_responce("DATA", {rcpt, State, Pid}) ->
+    send(Pid, "354 End data with <CR><LF>.<CR><LF>"),
+    {next_state, smtp_responce, {mail, State, Pid}};
 
 smtp_responce(Data, {rcpt, State, Pid}) ->
     case re:run(Data, "^RCPT\\sTO:<.*>$", []) of  
@@ -57,12 +57,11 @@ smtp_responce(Data, {rcpt, State, Pid}) ->
          Recipients=State#smtp_state.rcpt ++ [Rcpt],
          NextState=State#smtp_state{rcpt=Recipients},
          send(Pid, "250 Ok"),
-         {next_state, smtp_responce, {rcpt, NextState}};
+         {next_state, smtp_responce, {rcpt, NextState, Pid}};
       _Any ->
-         send(get(Pid, "500 Syntax error, command unrecognised"),
+         send(Pid, "500 Syntax error, command unrecognised"),
 	 {next_state, smtp_responce, State}
      end;
-
 
 smtp_responce(Data, {mail, State, Pid})->   
     Mail=State#smtp_state.mail  ++ Data,  
@@ -71,9 +70,9 @@ smtp_responce(Data, {mail, State, Pid})->
   <<13,10,46,10,13>> ->
       ets_store ! {new_mail, State}, 
       send(Pid, "250 Ok: queued as 12345"),
-      {next_state,smtp_responce, {quite, NextState}};
+      {next_state,smtp_responce, {quite, NextState, Pid}};
   _Any ->
-      {next_state,get_data,{mail,NextState}}
+      {next_state,get_data,{mail,NextState, Pid}}
     end;
 
 smtp_responce(_, {quite, _, Pid}) ->

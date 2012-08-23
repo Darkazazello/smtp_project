@@ -33,5 +33,5 @@ init([Port]) ->
 %%% Internal functions
 %%%===================================================================
 listen_socket(Port) ->
-    gen_tcp:listen(?PORT, [binary, {packet, 4}, {reuseaddr, true}, 
+    gen_tcp:listen(Port, [binary, {packet, 4}, {reuseaddr, true}, 
         {active, once}]).

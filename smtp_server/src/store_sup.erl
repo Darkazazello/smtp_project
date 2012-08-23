@@ -2,7 +2,7 @@
 
 -behaviour(supervisor).
 
--export([start_link/1]).
+-export([start_link/0]).
 
 -export([init/1]).
 
@@ -11,7 +11,7 @@
 start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
-init([]]) ->
+init([]) ->
     RestartStrategy = one_for_one,
     MaxRestarts = 1000,
     MaxSecondsBetweenRestarts = 3600,
@@ -24,12 +24,12 @@ writer_desc() ->
     Restart = permanent,
     Shutdown = brutal_kill,
     Type = worker,
-    {smtps_store, {smtps_store, start_link, []]},
+    {smtps_store, {smtps_store, start_link, []},
           Restart, Shutdown, Type, [smtps_store]}.
 
 ets_store() ->          
     Restart = permanent,
     Shutdown = brutal_kill,
     Type = worker,
-    {writer, {writer, start_link, []]},
+    {writer, {writer, start_link, []},
           Restart, Shutdown, Type, [writer]}.

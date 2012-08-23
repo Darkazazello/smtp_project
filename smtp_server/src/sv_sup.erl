@@ -2,7 +2,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/1]).
+-export([start_link/0]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -23,7 +23,7 @@ init([]) ->
     Childs=tcp_sup()++store_sup()++fsm_sup(),
     {ok, {SupFlags, [Childs]}}.
 
-tcpl_sup() ->
+tcp_sup() ->
    	Restart = permanent,
    	Shutdown = 2000,
    	Type = supervisor,

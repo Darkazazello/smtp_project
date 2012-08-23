@@ -1,6 +1,6 @@
 -module(tcp_listener).
 
--include("../include/smtp.hrl")
+-include("../include/smtp.hrl").
 -export([connect/1, start/1, start_link/1]).
 
 start(Listen) ->
@@ -13,7 +13,7 @@ connect(Listen) ->
     {ok, Socket} = gen_tcp:accept(Listen),
     supervisor:start_child(tcp_listener_sup, []),
     %spawn(fun() -> connect(Listen) end),
-    {ok, {Address, Port}} = inet:peername(Socket),
+    {ok, {Address, _Port}} = inet:peername(Socket),
     Ip = inet_parse:ntoa(Address),
     error_logger:info_msg("Server received connection from~p~n", [Ip]),
     case ets:lookup(fsm, {client, Ip}) of
@@ -52,5 +52,5 @@ loop(Socket, FsmPid) ->
 
 close_socket(Socket) ->
     gen_tcp:close(socket),
-    {ok, {Ip, Port}} = inet:peername(Socket),
+    {ok, {Ip, _Port}} = inet:peername(Socket),
     ets:delete(fsm, {client, Ip}).
