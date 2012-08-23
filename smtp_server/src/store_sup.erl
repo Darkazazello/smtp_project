@@ -8,20 +8,28 @@
 
 -define(SERVER, ?MODULE).
 
-start_link(BufferSize) ->
-    supervisor:start_link({local, ?SERVER}, ?MODULE, BufferSize).
+start_link() ->
+    supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
-init(BufferSize) ->
+init([]]) ->
     RestartStrategy = one_for_one,
     MaxRestarts = 1000,
     MaxSecondsBetweenRestarts = 3600,
 
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
 
+    {ok, {SupFlags, [writer_desc()++ets_store()]}}.
+
+writer_desc() ->
     Restart = permanent,
     Shutdown = brutal_kill,
     Type = worker,
+    {smtps_store, {smtps_store, start_link, []]},
+          Restart, Shutdown, Type, [smtps_store]}.
 
-    AChild = {smtps_store, {smtps_store, start_link, BufferSize},
-	      Restart, Shutdown, Type, [smtps_store]},
-    {ok, {SupFlags, [AChild]}}.
+ets_store() ->          
+    Restart = permanent,
+    Shutdown = brutal_kill,
+    Type = worker,
+    {writer, {writer, start_link, []]},
+          Restart, Shutdown, Type, [writer]}.

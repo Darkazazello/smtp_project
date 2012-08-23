@@ -20,16 +20,8 @@ start(_Type, _Args) ->
     ets:new(backup, {set, named_table, public}),
     ets:new(data, [duplicate_bag, named_table, public]),
     ets:new(fsm, [duplicate_bag, named_table, public]),
-    {ok,Root} = application:get_env(smtp_server, root),
-    {ok, Port} = application:get_env(smtp_server, port),
-    {ok, BufferSize} = application:get_env(smtp_server, buffer_size),
-    
-    tcp_sup:start_link(Port),%start tcp listener%
-    store_sup:start_link(BufferSize),%start store event process
-    gen_event:start_link(signals),
-    file_worker:add_handler(Root),
-    smpts_store:add_handler(BufferSize).
-    %supervisor:start_link({local, smtpd_sup}, smtpd_sup, [25, smtpd_fsm]).
+    sv_sup:start_link().
+
 
 get_port() ->
     {ok, Port}=application:get_env(smtp_server, port),
@@ -38,6 +30,10 @@ get_port() ->
 get_buffer() ->
    {ok, BufferSize} = application:get_env(smtp_server, buffer_size),
    BufferSize.
+
+get_root() ->
+    {ok,Root} = application:get_env(smtp_server, root),
+    Root.
 
 stop(_S) ->
     ok.

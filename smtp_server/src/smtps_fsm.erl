@@ -9,7 +9,7 @@
 -export([init/1, handle_event/3,
 	 handle_sync_event/4, handle_info/3, terminate/3, code_change/4, 
 	 smtp_responce/2, error_state/2]).
--import(re, [match/2]).
+
 -define(SERVER, ?MODULE).
 
 start(Pid) ->
@@ -69,7 +69,7 @@ smtp_responce(Data, {mail, State, Pid})->
     NextState=State#smtp_state{mail=Mail}, 
     case erlang:list_to_binary(Data) of
   <<13,10,46,10,13>> ->
-      gen_event:notify(writer, {new_mail, State}), 
+      ets_store ! {new_mail, State}, 
       send(Pid, "250 Ok: queued as 12345"),
       {next_state,smtp_responce, {quite, NextState}};
   _Any ->
