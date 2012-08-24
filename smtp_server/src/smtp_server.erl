@@ -20,7 +20,10 @@ start(_Type, _Args) ->
     ets:new(backup, {set, named_table, public}),
     ets:new(data, [duplicate_bag, named_table, public]),
     ets:new(fsm, [duplicate_bag, named_table, public]),
-    sv_sup:start_link().
+    Port = get_port(),
+    BufferSize=get_buffer(),
+    PathRoot=get_root(),
+    sv_sup:start_link([Port,BufferSize,PathRoot]).
 
 
 get_port() ->
