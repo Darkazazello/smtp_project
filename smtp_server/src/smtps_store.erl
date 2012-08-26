@@ -7,7 +7,9 @@
 -define(BUFFER_SIZE, 10000).
 
 start_link() ->
-    {ok, register(ets_store,spawn(fun()->loop() end))}.
+    Pid = spawn(fun()->loop() end),
+    register(ets_store, Pid),
+    {ok, Pid}.
 
 loop() ->
     receive 

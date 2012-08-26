@@ -1,39 +1,101 @@
 -module(tcp_listener).
 
+-behaviour(gen_server).
+
+-export([start_link/1, start/1]).
+
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3, loop/2]).
+
 -include("../include/smtp.hrl").
--export([connect/1, start/1, start_link/1]).
 
-start(Listen) ->
-    connect(Listen).
+-record(state, {}).
 
-start_link(Listen) ->
-    connect(Listen).
+-define(SERVER, ?MODULE).
 
-connect(Listen) ->
-    {ok, Socket} = gen_tcp:accept(Listen),
-    supervisor:start_child(tcp_listener_sup, []),
-    %spawn(fun() -> connect(Listen) end),
-    {ok, {Address, _Port}} = inet:peername(Socket),
+-define(OPTS, [binary, {packet, 4}, {reuseaddr, true}, 
+        {active, once}]).
+
+start_link(Port) ->
+  gen_server:start_link({local, ?SERVER}, ?MODULE, [Port], []).
+
+start(Port) ->
+    gen_server:start({local, ?SERVER}, ?MODULE, [Port], []).
+
+init([Port]) ->
+  {ok, Listen} = gen_tcp:listen(Port, ?OPTS),
+  ets:new(connections, [set,named_table]),
+  spawn(fun() -> connect(Listen, Port) end), 	
+  {ok, #state{}}.
+handle_call(_Request, _From, State) ->
+  Reply = ok,
+  {reply, Reply, State}.
+
+handle_cast({socket, Socket}, State) ->
+	{ok, {Address, _Port}} = inet:peername(Socket),
     Ip = inet_parse:ntoa(Address),
     error_logger:info_msg("Server received connection from~p~n", [Ip]),
     case ets:lookup(fsm, {client, Ip}) of
         [] -> 
-            {ok,Pid} = supervisor:start_child(fsm_sup, [self()]),
-            ets:insert(fsm, {{client,Ip}, {fsm, Pid}}),
-	    error_logger:info_msg("Save client's socket~n"),
-            loop(Socket, Pid);
-        [{{client,Ip},{fsm, Pid}}] ->
-	    error_logger:info_msg("Received another connection~n"),
-            loop(Socket, Pid);
+            error_logger:info_msg("Save client's socket~n"),
+	    {ok,FsmPid} = supervisor:start_child(fsm_sup, []),
+	    Pid = spawn(fun() -> loop(Socket, FsmPid) end),
+	    ets:insert(connections, {FsmPid, Pid}),
+            ets:insert(fsm, {{client,Ip}, {fsm, FsmPid}}),
+            gen_tcp:controlling_process(Socket, Pid);
+        [{{client,Ip},{fsm, FsmPid}}] ->
+	    	error_logger:info_msg("Received another connection~n"),
+            Pid = spawn(fun() -> loop(Socket, FsmPid) end),
+            gen_tcp:controlling_process(Socket, Pid);	
 	_Any ->
 	    error_logger:error("Something wrong with ets~p~n", [_Any])       
+    end,
+    {noreply, State};
+
+handle_cast({send, FsmPid, Message}, State) ->
+    case ets:lookup(connections, {FsmPid}) of
+	[FsmPid, Pid] ->
+	    Pid ! {send, Message};
+	_Any ->
+	    undefined
+    end,
+    {noreply,State};
+
+handle_cast({close, FsmPid}, State) ->
+    case ets:lookup(connections, FsmPid) of
+	[FsmPid, Pid] ->
+	    Pid ! {close};
+	_Any ->
+	    undefined
+    end,
+    {noreply, State}.
+	    
+handle_info(_Info, State) ->
+  {noreply, State}.
+
+terminate(_Reason, _State) ->
+    %%TODO terminate connections
+    ok.
+
+code_change(_OldVsn, State, _Extra) ->
+  {ok, State}.
+
+connect(Listen, Port) ->
+    case gen_tcp:accept(Listen) of
+	{ok,Socket} ->
+	    gen_server:cast(?SERVER, {socket, Socket}),
+	    connect(Listen, Port);
+	_Any ->
+	    error_logger:info_msg("Can't open connection: ~p~n", [_Any]),
+	    {ok, Listen} = gen_tcp:listen(Port, ?OPTS),
+	    connect(Listen, Port)
     end.
-    
+
 loop(Socket, FsmPid) ->
     receive
         {tcp, Socket, Bin} ->
 	        error_logger:info_report("Receive request~p", binary:bin_to_list(Bin)),
-                gen_fsm:sync_send_event(FsmPid, binary:bin_to_list(Bin)),            
+            gen_fsm:sync_send_event(FsmPid, binary:bin_to_list(Bin)),            
             loop(Socket, FsmPid);
         {tcp_close} ->
             gen_tcp:close(Socket),  

@@ -14,7 +14,7 @@ start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 init([]) ->
-    RestartStrategy = simple_for_one,
+    RestartStrategy = simple_one_for_one,
     MaxRestarts = 1000,
     MaxSecondsBetweenRestarts = 3600,
 
@@ -26,5 +26,4 @@ init([]) ->
 
     AChild = {smtps_fsm, {smtps_fsm, start_link, []},
 	      Restart, Shutdown, Type, [smtps_fsm]},
-
     {ok, {SupFlags, [AChild]}}.

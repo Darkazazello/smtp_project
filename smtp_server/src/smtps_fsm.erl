@@ -4,7 +4,7 @@
 
 -include("../include/smtp.hrl").
 
--export([start/1]).
+-export([start/0, start_link/0]).
 
 -export([init/1, handle_event/3,
 	 handle_sync_event/4, handle_info/3, terminate/3, code_change/4, 
@@ -12,72 +12,72 @@
 
 -define(SERVER, ?MODULE).
 
-start(Pid) ->
-    gen_fsm:start(?MODULE, Pid, []).
+start() ->
+    gen_fsm:start(?MODULE, [], []).
 
-start_link(Pid) ->
-    start(Pid).
+start_link() ->
+    gen_fsm:start_link(?MODULE, [], []).
 
-init(Pid) ->
-    {ok, smtp_responce, {helo, #smtp_state{}, Pid},infinity}.
+init([]) ->
+    {ok, smtp_responce, {helo, #smtp_state{}},infinity}.
 
-smtp_responce(Data, {helo, State, Pid}) ->
+smtp_responce(Data, {helo, State}) ->
     case re:run(Data, "^HELO\\s.*", []) of
 	{match, _} ->
 	    Client = string:sub_string(Data, 5),
 	    NextState = State#smtp_state{user=Client},
-	    send(Pid, "250 HELO " ++ Client ++ ", I am glad to meet you"),
-	    {next_state, smtp_responce, {from, NextState, Pid}};
+	    send("250 HELO " ++ Client ++ ", I am glad to meet you"),
+	    {next_state, smtp_responce, {from, NextState}};
 	_Any ->
-	    send(Pid, "500 Syntax error, command unrecognised"),
+	    send("500 Syntax error, command unrecognised"),
 	    {next_state, smtp_responce, State}
     end;
 
-smtp_responce(Data, {from, State, Pid}) ->
+smtp_responce(Data, {from, State}) ->
     case re:run(Data, "^MAIL\\sFROM:<*>$", []) of
   	  {match, _} ->
   	    Email = string:sub_string(Data,11,string:len(Data)-1),
   	    NextState=State#smtp_state{email=Email},
-  	    send(Pid, "250 Ok"),
-  	    {next_state, smtp_responce, {rcpt, NextState, Pid}};
+  	    send("250 Ok"),
+  	    {next_state, smtp_responce, {rcpt, NextState}};
   	  _Any ->
-  	    send(Pid, "500 Syntax error, command unrecognised"),
+  	    send("500 Syntax error, command unrecognised"),
   	    {next_state, smtp_responce, State}
     end;
 
 
-smtp_responce("DATA", {rcpt, State, Pid}) ->
-    send(Pid, "354 End data with <CR><LF>.<CR><LF>"),
-    {next_state, smtp_responce, {mail, State, Pid}};
+smtp_responce("DATA", {rcpt, State}) ->
+    send("354 End data with <CR><LF>.<CR><LF>"),
+    {next_state, smtp_responce, {mail, State}};
 
-smtp_responce(Data, {rcpt, State, Pid}) ->
+smtp_responce(Data, {rcpt, State}) ->
     case re:run(Data, "^RCPT\\sTO:<.*>$", []) of  
        {match, _} ->
          Rcpt=string:sub_string(Data,10,string:len(Data)-1), 
          Recipients=State#smtp_state.rcpt ++ [Rcpt],
          NextState=State#smtp_state{rcpt=Recipients},
-         send(Pid, "250 Ok"),
-         {next_state, smtp_responce, {rcpt, NextState, Pid}};
+         send("250 Ok"),
+         {next_state, smtp_responce, {rcpt, NextState}};
       _Any ->
-         send(Pid, "500 Syntax error, command unrecognised"),
+         send("500 Syntax error, command unrecognised"),
 	 {next_state, smtp_responce, State}
      end;
 
-smtp_responce(Data, {mail, State, Pid})->   
+smtp_responce(Data, {mail, State})->   
     Mail=State#smtp_state.mail  ++ Data,  
     NextState=State#smtp_state{mail=Mail}, 
     case erlang:list_to_binary(Data) of
   <<13,10,46,10,13>> ->
       ets_store ! {new_mail, State}, 
-      send(Pid, "250 Ok: queued as 12345"),
-      {next_state,smtp_responce, {quite, NextState, Pid}};
+      send("250 Ok: queued as 12345"),
+      {next_state,smtp_responce, {quite, NextState}};
   _Any ->
-      {next_state,get_data,{mail,NextState, Pid}}
+      {next_state,get_data,{mail,NextState}}
     end;
 
-smtp_responce(_, {quite, _, Pid}) ->
-    send(Pid, "221 Bye"),
-    close_socket(Pid).
+smtp_responce(_, {quite, _}) ->
+    send("221 Bye"),
+    close_socket().
 
 error_state(_Event, State) ->
     error_logger:error_message("Terminate FSM. State:~p/n", [State]).
@@ -94,8 +94,8 @@ terminate(_Reason, _StateName, _State) ->
 code_change(_OldVsn, StateName, State, _Extra) ->
     {ok, StateName, State}.
 
-send(Pid, Message) ->
-    Pid ! {send, Message}.
-close_socket(Pid) ->
-    Pid ! {close}.
+send(Message) ->
+     gen_server:cast({send, self(), Message}).
+close_socket() ->
+    gen_server:cast({close, self()}).
     

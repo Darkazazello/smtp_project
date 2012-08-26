@@ -16,11 +16,14 @@
 %%----------------------------------------------------------------------
 start(_Type, _Args) ->
     %{ok,ListenPort} = application:get_env(,server_smtp_port),
-    ets:new(users, {set, named_table, public}),
-    ets:new(backup, {set, named_table, public}),
+    ets:new(users, [set, named_table, public]),
+    ets:new(backup, [set, named_table, public]),
     ets:new(data, [duplicate_bag, named_table, public]),
     ets:new(fsm, [duplicate_bag, named_table, public]),
-    sv_sup:start_link().
+    Port = get_port(),
+    BufferSize=get_buffer(),
+    PathRoot=get_root(),
+    sv_sup:start_link([Port,BufferSize,PathRoot]).
 
 
 get_port() ->

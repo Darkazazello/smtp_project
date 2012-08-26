@@ -2,39 +2,40 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0]).
+-export([start_link/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
 
 -define(SERVER, ?MODULE).
--define(PORT, smtp_server:get_port()).
--define(BUFFER, smtp_server:get_buffer()).
 
-start_link() ->
-    supervisor:start_link({local, sv_sup}, ?MODULE, []).
+start_link(Params) ->
+    supervisor:start_link({local, sv_sup}, ?MODULE, Params).
 
-init([]) ->
+init([Port, Size, Root]) ->
     RestartStrategy = one_for_all,
     MaxRestarts = 1000,
     MaxSecondsBetweenRestarts = 3600,
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
+    
+    Childs=[fsm_sup()]++[tcp_sup(Port)]++[store_sup([Size,Root])],
+    Restart = permanent,
+    Shutdown = 2000,
+    Type = supervisor,
+    {ok, {SupFlags, Childs}}.
 
-    Childs=tcp_sup()++store_sup()++fsm_sup(),
-    {ok, {SupFlags, [Childs]}}.
-
-tcp_sup() ->
+tcp_sup(Port) ->
    	Restart = permanent,
    	Shutdown = 2000,
    	Type = supervisor,
-	{tcpl_sup, {tcp_listener_sup, start_link, [?PORT]},
+	{tcp_listener_sup, {tcp_listener_sup, start_link, [Port]},
     	Restart, Shutdown, Type, [tcp_listener_sup]}.
 
-store_sup() ->
+store_sup([Size,Root]) ->
 	Restart = permanent,
    	Shutdown = 2000,
    	Type = supervisor,
-	{store_sup, {store_sup, start_link, [?BUFFER]},
+	{store_sup, {store_sup, start_link, [Size,Root]},
     	Restart, Shutdown, Type, [store_sup]}.
 
 fsm_sup() ->
