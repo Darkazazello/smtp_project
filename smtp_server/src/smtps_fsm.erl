@@ -68,7 +68,7 @@ smtp_responce(Data, {mail, State})->
     NextState=State#smtp_state{mail=Mail}, 
     case erlang:list_to_binary(Data) of
   <<13,10,46,10,13>> ->
-      ets_store ! {new_mail, State}, 
+      gen_server:cast(file_worker,{new_mail, State}), 
       send("250 Ok: queued as 12345"),
       {next_state,smtp_responce, {quite, NextState}};
   _Any ->

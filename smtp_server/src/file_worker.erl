@@ -1,33 +1,40 @@
 -module(file_worker).
 
--behaviour(gen_event).
+-behaviour(gen_server).
 
--export([add_handler/1]).
+%% API
+-export([start_link/1]).
 
--export([init/1, handle_event/2, handle_call/2, 
-	 handle_info/2, terminate/2, code_change/3]).
+%% gen_server callbacks
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+	 terminate/2, code_change/3]).
+
+-define(SERVER, ?MODULE). 
 
 -include("../include/smtp.hrl").
 
--define(SERVER, ?MODULE).
+-record(params, {
+	  size=undefined,
+	  root=undefined}).
 
-add_handler(RootPath) ->
-    gen_event:add_sup_handler(file_worker, file_worker, [RootPath]).
+start_link([Size, Root]) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Size,Root], []).
 
-init(Root) ->
-    put(root, Root),
-    {ok, []}.
+init([Size,Root]) ->
+    {ok, #params{size=Size, root=Root}}.
 
-handle_event(write_files, State) ->
-    write_files(data),
-    {ok, State}.
-
-handle_call(_Request, State) ->
+handle_call(_Request, _From, State) ->
     Reply = ok,
-    {ok, Reply, State}.
+    {reply, Reply, State}.
+
+handle_cast({write_files, TableName}, State) ->
+    write_files(TableName, State#params.root),
+    {noreply, State};
+handle_cast({new_mail, Mail}, State) ->
+    add_data(Mail, State#params.size).
 
 handle_info(_Info, State) ->
-    {ok, State}.
+    {noreply, State}.
 
 terminate(_Reason, _State) ->
     ok.
@@ -35,25 +42,43 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-write_files(Table) ->
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
+write_files(Table, Root) ->
     List = ets:table2list(Table),
     ets:delete_all_objects(data),
-    view_list(List).
+    view_list(List, Root).
 
-generate_name(User, Folder) ->
+generate_name(User, Folder, Root) ->
     Count = ets:lookup(users, User) + 1,
     ets:insert(users, {User, Count}),
-    get(root)++"/" ++ Folder ++ "/" ++ Count ++ ".mail".
+    Root ++"/" ++ Folder ++ "/" ++ Count ++ ".mail".
 
-view_list(List) ->
-    lists:foreach(fun({User, Record}) -> write_file({generate_name(User, Record#smtp_state.host), Record#smtp_state.mail}) end, List).
+view_list(List, Root) ->
+    lists:foreach(fun({User, Record}) -> write_file({generate_name(User, Record#smtp_state.host, Root), Record#smtp_state.mail}) end, List).
   
 write_file({File, Data}) ->
     case file:open(File, write) of 
 	{ok,S} ->
-	    io:format(S,"~n~s", [Data]),
+        try
+            io:format(S,"~n~s", [Data])
+        catch 
+            _Any ->
+                ets:insert(backup, {File, Data})
+        end,                  
 	    file:close(S);
 	_Any ->
 	    ets:insert(backup, {File, Data}),
         error_logger:error_message("Can't save mail, ~p", [File])
     end.
+
+add_data(Mail, MaxSize) ->
+    ets:insert(mail, {Mail#smtp_state.user, Mail}),
+    Count = ets:info(mail,size),
+    if 
+        Count >= MaxSize ->
+            writer ! write_files;
+    true ->
+        error_logger:info_msg("Add new Mail to cache\n")
+    end.    

@@ -19,9 +19,6 @@ init([Port, Size, Root]) ->
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
     
     Childs=[fsm_sup()]++[tcp_sup(Port)]++[store_sup([Size,Root])],
-    Restart = permanent,
-    Shutdown = 2000,
-    Type = supervisor,
     {ok, {SupFlags, Childs}}.
 
 tcp_sup(Port) ->

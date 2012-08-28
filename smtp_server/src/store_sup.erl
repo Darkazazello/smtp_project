@@ -18,18 +18,11 @@ init([Size,Root]) ->
 
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
     
-    {ok, {SupFlags, [file_writer(Root)]++[ets_store(Size)]}}.
+    {ok, {SupFlags, [store([Size,Root])]}}.
 
-ets_store(Size) ->
+store([Size,Root]) ->
     Restart = permanent,
-    Shutdown = brutal_kill,
+    Shutdown = 2000,
     Type = worker,
-    {smtps_store, {smtps_store, start_link, [Size]},
-          Restart, Shutdown, Type, [smtps_store]}.
-
-file_writer(Root) ->          
-    Restart = permanent,
-    Shutdown = brutal_kill,
-    Type = worker,
-    {writer, {writer, start_link, [Root]},
-          Restart, Shutdown, Type, [writer]}.
+    {file_worker, {file_worker, start_link, [Size, Root]},
+          Restart, Shutdown, Type, [file_worker]}.

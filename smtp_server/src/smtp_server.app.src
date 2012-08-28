@@ -4,16 +4,16 @@
   {vsn, "0.0.3"},
   {modules, [
 	     smtps_fsm,
-	     smtps_store,
 	     tcp_listener_sup,
 	     tcp_listener,
 	     fsm_sup,
 	     smtp_server,
 	     sv_sup,
 	     store_sup,
-	     writer
+	     file_worker
 	    ]},
-  {registered, []},
+  {registered, [tcp_listener_sup, fsm_sup, store_sup,
+		tcp_listener, file_worker]},
   {applications, [
 		  kernel,
 		  stdlib,

@@ -23,9 +23,8 @@ start(Port) ->
     gen_server:start({local, ?SERVER}, ?MODULE, [Port], []).
 
 init([Port]) ->
-  {ok, Listen} = gen_tcp:listen(Port, ?OPTS),
   ets:new(connections, [set,named_table]),
-  Pid = spawn(fun() -> connect(Listen, Port) end), 	
+  Pid = spawn(fun() -> connect(nil, Port) end), 	
   ets:insert(connections, {0,Pid}),  
   {ok, #state{}}.
 handle_call(_Request, _From, State) ->
@@ -88,12 +87,22 @@ terminate_connections([{Key,Pid}|B]) ->
     io:format("Key ~p~n", [Key]),
     terminate_connections(B).
 
+connect(nil, Port) ->
+    case gen_tcp:listen(Port, ?OPTS) of
+	{ok, Listen} ->
+	    connect(Listen, Port);
+	{'EXIT', _Reason, _Pid} ->
+	    error_logger:info_msg("Terminate connect");
+	_Any ->
+	    connect(nil, Port)
+    end;
+
 connect(Listen, Port) ->
     case gen_tcp:accept(Listen) of
 	{ok,Socket} ->
 	    gen_server:cast(?SERVER, {socket, Socket}),
 	    connect(Listen, Port);
-	{'EXIT', Reason, Pid} ->
+	{'EXIT', _Reason, _Pid} ->
 	    error_logger:info_msg("Terminate connect");
 	_Any ->
 	    error_logger:info_msg("Can't open connection: ~p~n", [_Any,self()]),
@@ -121,7 +130,7 @@ loop(Socket, FsmPid) ->
         {close} ->
             close_socket(Socket),
             error_logger:info_msg("Nice work~n");
-	{'EXIT', Reason, Pid} ->
+	{'EXIT', _Reason, _Pid} ->
 	    close_socket(Socket)
         after ?MAX_TIMEOUT ->
 	    error_logger:info_report("Server closed socket"),
