@@ -3,13 +3,15 @@
   {description, "Simple smtp server"},
   {vsn, "0.0.3"},
   {modules, [
-	     file_worker,
 	     smtps_fsm,
 	     smtps_store,
-	     tcp_sup,
-	     tcp_server,
+	     tcp_listener_sup,
+	     tcp_listener,
+	     fsm_sup,
 	     smtp_server,
-	     store_sup
+	     sv_sup,
+	     store_sup,
+	     writer
 	    ]},
   {registered, []},
   {applications, [
