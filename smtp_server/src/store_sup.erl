@@ -24,5 +24,5 @@ store([Size,Root]) ->
     Restart = permanent,
     Shutdown = 2000,
     Type = worker,
-    {file_worker, {file_worker, start_link, [Size, Root]},
+    {file_worker, {file_worker, start_link, []},
           Restart, Shutdown, Type, [file_worker]}.

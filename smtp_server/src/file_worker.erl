@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1]).
+-export([start_link/1, start_link/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -17,8 +17,18 @@
 	  size=undefined,
 	  root=undefined}).
 
+-define(SIZE,100).
+-define(ROOT,"").
+
 start_link([Size, Root]) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [Size,Root], []).
+
+start_link() ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+
+init([]) ->
+    {ok, #params{size=?SIZE, root=?ROOT}};
 
 init([Size,Root]) ->
     {ok, #params{size=Size, root=Root}}.
