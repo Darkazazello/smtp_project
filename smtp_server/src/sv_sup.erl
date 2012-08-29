@@ -25,14 +25,14 @@ tcp_sup(Port) ->
    	Restart = permanent,
    	Shutdown = 2000,
    	Type = supervisor,
-	{tcp_listener_sup, {tcp_listener_sup, start_link, [Port]},
+	{tcp_listener_sup, {tcp_listener_sup, start_link, []},
     	Restart, Shutdown, Type, [tcp_listener_sup]}.
 
 store_sup([Size,Root]) ->
 	Restart = permanent,
    	Shutdown = 2000,
    	Type = supervisor,
-	{store_sup, {store_sup, start_link, [Size,Root]},
+	{store_sup, {store_sup, start_link, []},
     	Restart, Shutdown, Type, [store_sup]}.
 
 fsm_sup() ->

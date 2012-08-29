@@ -2,7 +2,7 @@
 
 -behaviour(gen_server).
 
--export([start_link/1, start/1, terminate_connections/1]).
+-export([start_link/0, start/0, terminate_connections/1]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3, loop/2]).
@@ -15,16 +15,17 @@
 
 -define(OPTS, [binary, {packet, 4}, {reuseaddr, true}, 
         {active, once}]).
+-define(PORT,12345).
 
-start_link(Port) ->
-  gen_server:start_link({local, ?SERVER}, ?MODULE, [Port], []).
+start_link() ->
+  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-start(Port) ->
-    gen_server:start({local, ?SERVER}, ?MODULE, [Port], []).
+start() ->
+    gen_server:start({local, ?SERVER}, ?MODULE, [], []).
 
-init([Port]) ->
+init([]) ->
   ets:new(connections, [set,named_table]),
-  Pid = spawn(fun() -> connect(nil, Port) end), 	
+  Pid = spawn(fun() -> connect(nil, ?PORT) end), 	
   ets:insert(connections, {0,Pid}),  
   {ok, #state{}}.
 handle_call(_Request, _From, State) ->
@@ -87,28 +88,28 @@ terminate_connections([{Key,Pid}|B]) ->
     io:format("Key ~p~n", [Key]),
     terminate_connections(B).
 
-connect(nil, Port) ->
-    case gen_tcp:listen(Port, ?OPTS) of
+connect(nil, ?PORT) ->
+    case gen_tcp:listen(?PORT, ?OPTS) of
 	{ok, Listen} ->
-	    connect(Listen, Port);
+	    connect(Listen, ?PORT);
 	{'EXIT', _Reason, _Pid} ->
 	    error_logger:info_msg("Terminate connect");
 	_Any ->
-	    connect(nil, Port)
+	    connect(nil, ?PORT)
     end;
 
-connect(Listen, Port) ->
+connect(Listen, ?PORT) ->
     case gen_tcp:accept(Listen) of
 	{ok,Socket} ->
 	    gen_server:cast(?SERVER, {socket, Socket}),
-	    connect(Listen, Port);
+	    connect(Listen, ?PORT);
 	{'EXIT', _Reason, _Pid} ->
 	    error_logger:info_msg("Terminate connect");
 	_Any ->
 	    error_logger:info_msg("Can't open connection: ~p~n", [_Any,self()]),
-	    case gen_tcp:listen(Port, ?OPTS) of
+	    case gen_tcp:listen(?PORT, ?OPTS) of
 		{ok, Listen_} ->
-		    connect(Listen_, Port);
+		    connect(Listen_, ?PORT);
 		__Any ->
 		    error_logger:info_msg("Can't open connection: ~p~n", [__Any,self()])
 	    end

@@ -2,25 +2,25 @@
 
 -behaviour(supervisor).
 
--export([start_link/1]).
+-export([start_link/0]).
 
 -export([init/1]).
 
 -define(SERVER, ?MODULE).
 
-start_link([Size,Root]) ->
-    supervisor:start_link({local, ?SERVER}, ?MODULE, [Size,Root]).
+start_link() ->
+    supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
-init([Size,Root]) ->
+init([]) ->
     RestartStrategy = one_for_one,
     MaxRestarts = 1000,
     MaxSecondsBetweenRestarts = 3600,
 
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
     
-    {ok, {SupFlags, [store([Size,Root])]}}.
+    {ok, {SupFlags, [store(1,1)]}}.
 
-store([Size,Root]) ->
+store(A,B) ->
     Restart = permanent,
     Shutdown = 2000,
     Type = worker,
