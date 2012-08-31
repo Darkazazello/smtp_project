@@ -8,17 +8,19 @@
 %% ===================================================================
 %% Application callbacks
 %% ===================================================================
-start(Arg1, Arg2) ->
+start(_Arg1, _Arg2) ->
     start().
 start() ->
-    {ok, Host} =  application:get_env(smtpc, host),
-    {ok, Port} = application:get_env(smtpc, port),
+    %{ok, Host} =  application:get_env(smtpc, host),
+    %{ok, Port} = application:get_env(smtpc, port),
+    Host="localhost",
+    Port=12345,
     State = state(),
     {ok, Pid} = smtpc_fsm:start(State),
     gen_event:start({local, smtpc_tcp}),
     smtpc_tcp:add_handler({Host, Port, Pid}),
-    gen_fsm:sync_send_event(Pid, start),
-    {ok, Pid}.
+    gen_fsm:send_event(Pid, start),
+    {ok, 0}.
 
 stop(_State) ->
     ok.

@@ -18,7 +18,7 @@ start(State) ->
 init(State) ->
     {ok, cmd_client, {helo,State}}.
 
-cmd_client(Event, {helo,State}) ->
+cmd_client(_Event, {helo,State}) ->
     case send("HELO " ++ State#state.my_host) of
 	{ok,_} ->
 	    {next_state, cmd_client, {from, State}};
@@ -117,4 +117,5 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 send(Message) ->
+    io:format("I'm here~n ~p~n",[Message]),
     gen_event:notify(smtpc_tcp, Message).
