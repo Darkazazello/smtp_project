@@ -4,13 +4,13 @@
   {vsn, "0.0.3"},
   {modules, [
 	     	smtpc_tcp,
-		smtpc_fsm,
-		smtpc_sup
-	
-	    ]},
-  {registered, [signals]},
+		smtpc_fsm
+		]},
+  {registered, []},
   {applications, [
-                   sasl
+                   sasl,
+		  kernel,
+		  stdlib
                  ]},
   {mod, { smtpc_app, []}},
   {env, [{host, "localhost"}, {port, 12345}]}

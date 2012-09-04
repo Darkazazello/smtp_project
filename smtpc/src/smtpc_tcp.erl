@@ -21,7 +21,7 @@ init({Host, Port, Fsm_Pid}) ->
             {Socket, Fsm_Pid};
             _Any ->
                  error_logger:error_msg("Can't establish a connection to the server at ~p:~p\n", [Host,Port]),
-                 {error,lost_connection}
+                 terminate(error_connection, [])	    
     end.
     
 handle_event({send, Data}, {Socket, Fsm_Pid}) ->
@@ -30,6 +30,7 @@ handle_event({send, Data}, {Socket, Fsm_Pid}) ->
         {error} ->
             terminate("Connection refused/n", []);
         Responce ->
+	    error_logger:info_msg("Get responce ~p~n", [Responce]),
             gen_fsm:send_event(Fsm_Pid, Responce)
     end;
 

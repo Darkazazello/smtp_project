@@ -16,10 +16,8 @@ start() ->
     Host="localhost",
     Port=12345,
     State = state(),
-    {ok, Pid} = smtpc_fsm:start(State),
-    gen_event:start({local, smtpc_tcp}),
-    smtpc_tcp:add_handler({Host, Port, Pid}),
-    gen_fsm:send_event(Pid, start),
+    smtpc_fsm:start(State),
+    gen_fsm:send_event(smtpc_fsm, start),
     {ok, 0}.
 
 stop(_State) ->

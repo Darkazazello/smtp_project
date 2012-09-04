@@ -14,7 +14,7 @@
 -define(SERVER, ?MODULE).
 
 -define(OPTS, [binary, {packet, 4}, {reuseaddr, true}, 
-        {active, once}]).
+        {active, true}]).
 -define(PORT,12345).
 
 start_link() ->
@@ -95,6 +95,7 @@ connect(nil, ?PORT) ->
 	{'EXIT', _Reason, _Pid} ->
 	    error_logger:info_msg("Terminate connect");
 	_Any ->
+	    error_logger:warning_msg("Can't read socket on server with port ~p~n", [?PORT]),
 	    connect(nil, ?PORT)
     end;
 
@@ -125,6 +126,7 @@ loop(Socket, FsmPid) ->
             gen_tcp:close(Socket),  
             error_logger:info_report("Client closed socket");
         {send, Data} ->
+	    error_logger:info_msg("Send responce ~p~n", [Data]),
             gen_tcp:send(Socket, binary:list_to_bin(Data)),
             inet:setopts(Socket, [{active, once}]),
             loop(Socket, FsmPid);
